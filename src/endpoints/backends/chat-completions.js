@@ -233,13 +233,14 @@ async function sendClaudeRequest(request, response) {
         const useTools = Array.isArray(request.body.tools) && request.body.tools.length > 0;
         const useSystemPrompt = Boolean(request.body.use_sysprompt);
         const convertedPrompt = convertClaudeMessages(request.body.messages, request.body.assistant_prefill, useSystemPrompt, useTools, getPromptNames(request));
+        const isAlwaysOnThinkingModel = /^claude-fable-5/.test(request.body.model);
         const useThinking = /^claude-(3-7|opus-4|sonnet-4|haiku-4-5|opus-4-5|opus-4-6|sonnet-4-6|opus-4-7|opus-4-8)/.test(request.body.model);
-        const useWebSearch = /^claude-(3-5|3-7|opus-4|sonnet-4|haiku-4-5|opus-4-5|opus-4-6|sonnet-4-6|opus-4-7|opus-4-8)/.test(request.body.model) && Boolean(request.body.enable_web_search);
+        const useWebSearch = /^claude-(3-5|3-7|fable-5|opus-4|sonnet-4|haiku-4-5|opus-4-5|opus-4-6|sonnet-4-6|opus-4-7|opus-4-8)/.test(request.body.model) && Boolean(request.body.enable_web_search);
         const isLimitedSampling = /^claude-(opus-4-1|sonnet-4-5|haiku-4-5|opus-4-5|opus-4-6|sonnet-4-6)/.test(request.body.model);
-        const useVerbosity = /^claude-(opus-4-5|opus-4-6|sonnet-4-6|opus-4-7|opus-4-8)/.test(request.body.model);
-        const noPrefillModel = /^claude-(opus-4-6|sonnet-4-6|opus-4-7|opus-4-8)/.test(request.body.model);
-        const isAdaptiveModel = /^claude-(opus-4-7|opus-4-8)/.test(request.body.model) || (enableAdaptiveThinking && /^claude-(opus-4-6|sonnet-4-6)/.test(request.body.model));
-        const noSamplingModel = /^claude-(opus-4-7|opus-4-8)/.test(request.body.model);
+        const useVerbosity = /^claude-(fable-5|opus-4-5|opus-4-6|sonnet-4-6|opus-4-7|opus-4-8)/.test(request.body.model);
+        const noPrefillModel = /^claude-(fable-5|opus-4-6|sonnet-4-6|opus-4-7|opus-4-8)/.test(request.body.model);
+        const isAdaptiveModel = isAlwaysOnThinkingModel || /^claude-(opus-4-7|opus-4-8)/.test(request.body.model) || (enableAdaptiveThinking && /^claude-(opus-4-6|sonnet-4-6)/.test(request.body.model));
+        const noSamplingModel = /^claude-(fable-5|opus-4-7|opus-4-8)/.test(request.body.model);
         let fixThinkingPrefill = false;
         // Add custom stop sequences
         const stopSequences = [];
@@ -326,7 +327,18 @@ async function sendClaudeRequest(request, response) {
         const budgetTokens = calculateClaudeBudgetTokens(requestBody.max_tokens, reasoningEffort, requestBody.stream, isAdaptiveModel);
 
         // Adaptive thinking: returns a string effort level (like Gemini 3)
-        if (useThinking && typeof budgetTokens === 'string') {
+        if (isAlwaysOnThinkingModel) {
+            fixThinkingPrefill = true;
+            const includeReasoning = Boolean(request.body.include_reasoning);
+            if (includeReasoning) {
+                requestBody.thinking = { display: 'summarized' };
+            }
+            if (typeof budgetTokens === 'string') {
+                requestBody.output_config ??= {};
+                requestBody.output_config.effort = budgetTokens;
+            }
+            delete requestBody.top_k;
+        } else if (useThinking && typeof budgetTokens === 'string') {
             fixThinkingPrefill = true;
             requestBody.thinking = { type: 'adaptive' };
             const includeReasoning = Boolean(request.body.include_reasoning);
@@ -399,11 +411,26 @@ async function sendClaudeRequest(request, response) {
 
             /** @type {any} */
             const generateResponseJson = await generateResponse.json();
-            const responseText = generateResponseJson?.content?.[0]?.text || '';
+            const responseText = Array.isArray(generateResponseJson?.content)
+                ? generateResponseJson.content
+                    .filter(content => content?.type === 'text' && typeof content.text === 'string')
+                    .map(content => content.text)
+                    .join('')
+                : '';
             console.debug('Claude response:', generateResponseJson);
 
             // Wrap it back to OAI format + save the original content
-            const reply = { choices: [{ 'message': { 'content': responseText } }], content: generateResponseJson.content };
+            const reply = {
+                choices: [{ 'message': { 'content': responseText } }],
+                content: generateResponseJson.content,
+                stop_reason: generateResponseJson.stop_reason,
+                stop_details: generateResponseJson.stop_details,
+            };
+            if (generateResponseJson.stop_reason === 'refusal' && !responseText) {
+                const category = generateResponseJson.stop_details?.category;
+                reply.choices[0].message.content = `Claude refused this request${category ? ` (${category})` : ''}.`;
+                reply.choices[0].finish_reason = 'content_filter';
+            }
             return response.send(reply);
         }
     } catch (error) {
