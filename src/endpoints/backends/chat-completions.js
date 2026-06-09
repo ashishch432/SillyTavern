@@ -331,7 +331,7 @@ async function sendClaudeRequest(request, response) {
             fixThinkingPrefill = true;
             const includeReasoning = Boolean(request.body.include_reasoning);
             if (includeReasoning) {
-                requestBody.thinking = { display: 'summarized' };
+                requestBody.thinking = { type: 'adaptive', display: 'summarized' };
             }
             if (typeof budgetTokens === 'string') {
                 requestBody.output_config ??= {};
