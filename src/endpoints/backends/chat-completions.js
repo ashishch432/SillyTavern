@@ -2457,6 +2457,7 @@ router.post('/generate', async function (request, response) {
             throw new Error('This provider is temporarily disabled.');
         } else if (request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.ZAI) {
             const defaultApiUrl = request.body.zai_endpoint === ZAI_ENDPOINT.CODING ? API_ZAI_CODING : API_ZAI_COMMON;
+            const isGlm52 = String(request.body.model).toLowerCase() === 'glm-5.2';
             apiUrl = new URL(request.body.reverse_proxy || defaultApiUrl).toString();
             apiKey = request.body.reverse_proxy ? request.body.proxy_password : readSecret(request.user.directories, SECRET_KEYS.ZAI, request.body.secret_id);
             headers = {
@@ -2469,6 +2470,12 @@ router.post('/generate', async function (request, response) {
             };
             if (request.body.json_schema) {
                 setJsonObjectFormat(bodyParams, request.body.messages, request.body.json_schema);
+            }
+            if (isGlm52 && request.body.include_reasoning && request.body.reasoning_effort) {
+                bodyParams['reasoning_effort'] = request.body.reasoning_effort;
+            }
+            if (isGlm52 && request.body.stream && Array.isArray(request.body.tools) && request.body.tools.length > 0) {
+                bodyParams['tool_stream'] = true;
             }
         } else if (request.body.chat_completion_source === CHAT_COMPLETION_SOURCES.SILICONFLOW) {
             const defaultApiUrl = request.body.siliconflow_endpoint === SILICONFLOW_ENDPOINT.CN
