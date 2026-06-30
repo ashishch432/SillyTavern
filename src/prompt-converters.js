@@ -1110,15 +1110,15 @@ export function cachingSystemPromptForOpenRouter(messages, ttl = undefined) {
 
 /**
  * Calculate the Claude budget tokens for a given reasoning effort.
- * Returns a string effort level for adaptive thinking (Opus 4.6+), a number for traditional thinking, or null for auto.
+ * Returns a string effort level for adaptive thinking models, a number for traditional thinking, or null for auto.
  * @param {number} maxTokens Maximum tokens
  * @param {string} reasoningEffort Reasoning effort
  * @param {boolean} stream If streaming is enabled
- * @param {boolean} isAdaptiveModel If the model supports adaptive thinking (Opus 4.6+)
+ * @param {boolean} isAdaptiveModel If the model supports adaptive thinking
  * @returns {number|string|null} Budget tokens, effort string, or null
  */
 export function calculateClaudeBudgetTokens(maxTokens, reasoningEffort, stream, isAdaptiveModel) {
-    // Adaptive thinking for Opus 4.6+: return effort string (like Gemini 3)
+    // Adaptive thinking models return effort strings (like Gemini 3).
     if (isAdaptiveModel) {
         switch (reasoningEffort) {
             case REASONING_EFFORT.auto:

@@ -101,7 +101,7 @@ describe('convertTextCompletionPrompt', () => {
 
 
 describe('calculateClaudeBudgetTokens', () => {
-    describe('adaptive model (Opus 4.6+)', () => {
+    describe('adaptive model', () => {
         test('auto returns null', () => {
             expect(mod.calculateClaudeBudgetTokens(8192, 'auto', true, true)).toBeNull();
         });

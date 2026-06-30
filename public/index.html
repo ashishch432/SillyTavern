@@ -2175,8 +2175,8 @@
                                             <strong class="toggle-description justifyLeft marginBot5" data-source="openrouter">
                                                 Request model reasoning = Off with Reasoning Effort = Minimum disables reasoning entirely on models that support that, but can cause errors with some models.
                                             </strong>
-                                            <div class="toggle-description justifyLeft marginBot5" data-source="claude" data-i18n="Allocates a portion of the response length for thinking (min: 1024 tokens, low: 10%, medium: 25%, high: 50%, max: 95%), but minimum 1024 tokens. Auto does not request thinking.">
-                                                Allocates a portion of the response length for thinking (min: 1024 tokens, low: 10%, medium: 25%, high: 50%, max: 95%), but minimum 1024 tokens. Auto does not request thinking.
+                                            <div class="toggle-description justifyLeft marginBot5" data-source="claude" data-i18n="For adaptive Claude models, sends an effort level. For legacy thinking models, allocates a portion of the response length for thinking (min: 1024 tokens, low: 10%, medium: 25%, high: 50%, max: 95%). Auto does not send a thinking field.">
+                                                For adaptive Claude models, sends an effort level. For legacy thinking models, allocates a portion of the response length for thinking (min: 1024 tokens, low: 10%, medium: 25%, high: 50%, max: 95%). Auto does not send a thinking field.
                                             </div>
                                             <div class="toggle-description justifyLeft marginBot5" data-source="makersuite,vertexai">
                                                 <span data-i18n="Sets a dynamic reasoning depth level for thinking (Flash 3/Pro 3). High and low are supported by both, minimal and medium are Flash 3 only. Auto lets the model decide.">
@@ -2204,7 +2204,7 @@
                                                 Constrains the verbosity of the model's response.
                                             </div>
                                             <strong class="toggle-description justifyLeft marginBot5" data-source="claude">
-                                                On Opus 4.6 / Sonnet 4.6, a non-automatic Reasoning Effort takes precedence over Verbosity.
+                                                On adaptive Claude models, a non-automatic Reasoning Effort takes precedence over Verbosity.
                                             </strong>
                                         </div>
                                     </div>
@@ -3176,10 +3176,12 @@
                                 <h4 data-i18n="Claude Model">Claude Model</h4>
                                 <select id="model_claude_select">
                                     <optgroup label="Versions">
+                                        <option value="claude-opus-4-8">claude-opus-4-8</option>
                                         <option value="claude-opus-4-7">claude-opus-4-7</option>
                                         <option value="claude-opus-4-6">claude-opus-4-6</option>
                                         <option value="claude-opus-4-5">claude-opus-4-5</option>
                                         <option value="claude-opus-4-5-20251101">claude-opus-4-5-20251101</option>
+                                        <option value="claude-sonnet-5">claude-sonnet-5</option>
                                         <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
                                         <option value="claude-sonnet-4-5">claude-sonnet-4-5</option>
                                         <option value="claude-sonnet-4-5-20250929">claude-sonnet-4-5-20250929</option>
