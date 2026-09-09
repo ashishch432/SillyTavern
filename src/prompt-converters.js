@@ -453,8 +453,9 @@ export function convertGooglePrompt(messages, model, useSysPrompt, names) {
     const system_instruction = { parts: sysPrompt.map(text => ({ text })) };
     const toolNameMap = {};
 
+    // Prefills rejected starting with Gemini 3.6 Flash and 3.5 Flash-Lite, and later Flash releases.
     // https://ai.google.dev/gemini-api/docs/latest-model#prefilled-model-turn-validation
-    const noPrefillModel = /gemini-3\.[67]-flash|gemini-3\.5-flash-lite/.test(model);
+    const noPrefillModel = /gemini-3\.(?:[6-9]|\d{2,})-flash|gemini-3\.5-flash-lite/.test(model);
 
     const contents = [];
     messages.forEach((message, index) => {
@@ -1264,7 +1265,8 @@ export function calculateGoogleBudgetTokens(maxTokens, reasoningEffort, model) {
 
     function getGemini3FlashBudget() {
         // https://ai.google.dev/gemini-api/docs/models/gemini-3.7-flash
-        const noMinimalThinking = /gemini-3\.7-flash/.test(model);
+        // Gemini 3.8 Flash also does not support thinking_level=minimal
+        const noMinimalThinking = /gemini-3\.(?:[7-9]|\d{2,})-flash/.test(model);
         switch (reasoningEffort) {
             case REASONING_EFFORT.auto:
                 return null;
