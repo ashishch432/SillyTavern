@@ -453,8 +453,9 @@ export function convertGooglePrompt(messages, model, useSysPrompt, names) {
     const system_instruction = { parts: sysPrompt.map(text => ({ text })) };
     const toolNameMap = {};
 
-    // https://ai.google.dev/gemini-api/docs/latest-model#prefilled-model-turn-validation
-    const noPrefillModel = /gemini-3\.[678]-flash|gemini-3\.5-flash-lite/.test(model);
+    // https://ai.google.dev/gemini-api/docs/generate-content/whats-new-gemini-3.6#api-changes-and-parameter-updates
+    // Gemini 3.6 and later, including Gemini 4 Argon, reject a trailing model turn.
+    const noPrefillModel = /gemini-4-argon|gemini-3\.[678]-flash|gemini-3\.5-flash-lite/.test(model);
 
     const contents = [];
     messages.forEach((message, index) => {
@@ -525,8 +526,8 @@ export function convertGooglePrompt(messages, model, useSysPrompt, names) {
                         },
                     };
 
-                    // https://ai.google.dev/gemini-api/docs/gemini-3#media_resolution
-                    if (/gemini-3/.test(model) && mediaResolution) {
+                    // https://ai.google.dev/gemini-api/docs/generate-content/media-resolution
+                    if (/gemini-[34]/.test(model) && mediaResolution) {
                         part.mediaResolution = {
                             level: mediaResolution,
                         };
@@ -572,21 +573,21 @@ export function convertGooglePrompt(messages, model, useSysPrompt, names) {
             }
         });
 
-        // https://ai.google.dev/gemini-api/docs/gemini-3#migrating_from_other_models
-        // Inject stored thought signatures, or fall back to bypass magic for Gemini 3
-        if (/gemini-3/.test(model) || /gemini-2\.5/.test(model)) {
+        // https://ai.google.dev/gemini-api/docs/generate-content/thought-signatures
+        // Inject stored thought signatures, or fall back to bypass magic for Gemini 3 and 4
+        if (/gemini-[34]/.test(model) || /gemini-2\.5/.test(model)) {
             const skipSignatureMagic = 'skip_thought_signature_validator';
             const textSignature = message.signature;
 
             parts.forEach((part) => {
                 if (enableThoughtSignatures && textSignature && typeof part.text === 'string') {
                     part.thoughtSignature = textSignature;
-                } else if (/gemini-3/.test(model)) {
-                    // Gemini 3: Fall back to bypass magic for function calls (mandatory) and images
+                } else if (/gemini-[34]/.test(model)) {
+                    // Gemini 3 and 4 require a signature on function calls. Image models are Gemini 3 only.
                     if (part.functionCall && !part.thoughtSignature) {
                         part.thoughtSignature = skipSignatureMagic;
                     }
-                    if (/-image/.test(model) && message.role === 'model') {
+                    if (/gemini-3/.test(model) && /-image/.test(model) && message.role === 'model') {
                         if (typeof part.text === 'string' || part.inlineData) {
                             part.thoughtSignature = skipSignatureMagic;
                         }
@@ -1300,6 +1301,29 @@ export function calculateGoogleBudgetTokens(maxTokens, reasoningEffort, model) {
         }
 
         return null;
+    }
+
+    function getGemini4ArgonBudget() {
+        // https://ai.google.dev/gemini-api/docs/models/gemini-4-argon
+        // Levels are low, medium (default), and high. minimal is rejected.
+        switch (reasoningEffort) {
+            case REASONING_EFFORT.auto:
+                return null;
+            case REASONING_EFFORT.min:
+            case REASONING_EFFORT.low:
+                return 'low';
+            case REASONING_EFFORT.medium:
+                return 'medium';
+            case REASONING_EFFORT.high:
+            case REASONING_EFFORT.max:
+                return 'high';
+        }
+
+        return null;
+    }
+
+    if (/gemini-4-argon/.test(model)) {
+        return getGemini4ArgonBudget();
     }
 
     if (/gemini-3[.\d]*-pro/.test(model)) {
